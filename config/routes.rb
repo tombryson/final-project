@@ -1,4 +1,9 @@
 Rails.application.routes.draw do
+  resource :users, only: [:create]
+  post "/login", to: "auth#login"
+  get "/auto_login", to: "auth#auto_login"
+  get "/user_is_authed", to: "auth#user_is_authed"
+  get "/users" => "users#index"
   get 'planes/index'
   get 'planes/new'
   get 'planes/edit'
@@ -19,8 +24,4 @@ Rails.application.routes.draw do
   get 'users/edit'
   get 'users/new'
   get 'users/destroy'
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
-
-  # Defines the root path route ("/")
-  # root "articles#index"
 end
