@@ -1,6 +1,7 @@
 class FlightsController < ApplicationController
   def index
     @flights = Flight.all
+    @planes = Plane.all
   end
   
   def search
@@ -8,11 +9,18 @@ class FlightsController < ApplicationController
     origin = params[:from].upcase
     destination = params[:to].upcase
     @filtered_flights = []
+    puts @all_flights
     @all_flights.each do |flight|
+      puts origin
+      puts destination
+      puts flight.from
+      puts flight.to
       if flight.from == origin && flight.to == destination
+        puts 'found a flight' + flight.id.to_s
         @filtered_flights << flight
       end
     end
+    render json: @filtered_flights.empty? ? {} : @filtered_flights.to_json
   end
 
   def new
@@ -22,6 +30,11 @@ class FlightsController < ApplicationController
   end
 
   def show
+    flight_id = params[:id]
+    @flight = Flight.find_by_id(flight_id)
+    @plane = Plane.find_by_id(@flight.plane_id)
+    render @flight.to_json
+    render @plane.to_json
   end
 
   def destroy

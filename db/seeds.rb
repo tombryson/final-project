@@ -8,17 +8,20 @@ Booking.destroy_all
 puts "Creating bookings..."
 a1 = Booking.create :user_id => "1", :flight_id => "1", :rows => 27, :cols => 6
 a2 = Booking.create :user_id => "2", :flight_id => "2", :rows => 42, :cols => 8
-puts "#{Booking.count} planes created."
-
-Flight.destroy_all
-puts "Creating flights..."
-f1 = Flight.create :flight_id => "1", :date => DateTime.new(2022, 9, 22), :from => "SYD", :to => "HND", :plane_id => "B737"
-f2 = Flight.create :flight_id => "2", :date => DateTime.new(2022, 10, 14), :from => "MEL", :to => "AKL", :plane_id => "A330"
-puts "#{Flight.count} flights created."
+puts "#{Booking.count} bookings created."
 
 Plane.destroy_all
 puts "Creating planes..."
-a1 = Plane.create :name => "B737", :rows => 27, :cols => 6
-a2 = Plane.create :name => "A330", :rows => 42, :cols => 8
+p1 = Plane.create :rows => 27, :cols => 6, :model => "B737"
+p2 = Plane.create :rows => 42, :cols => 8, :model => "A330"
 puts "#{Plane.count} planes created."
+
+Flight.destroy_all
+puts "Creating flights..."
+f1 = Flight.create :flight_id => "1", :plane_id => 1, :date => DateTime.new(2022, 9, 22), :from => "SYD", :to => "HND"
+f2 = Flight.create :flight_id => "2", :plane_id => 2, :date => DateTime.new(2022, 10, 14), :from => "MEL", :to => "AKL"
+puts "#{Flight.count} flights created."
+
+
+
 
