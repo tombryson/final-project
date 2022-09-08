@@ -1,5 +1,5 @@
 class AuthController < ApplicationController
-    skip_before_action :require_login, only: [:login, :auto_login]
+    # skip_before_action :require_login, only: [:login, :auto_login]
     before_action :check_logged_in, only: [:index]
 
     def index

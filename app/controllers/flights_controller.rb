@@ -20,7 +20,7 @@ class FlightsController < ApplicationController
         @filtered_flights << flight
       end
     end
-    render json: @filtered_flights.empty? ? {} : @filtered_flights.to_json
+    render json: @filtered_flights.empty? ? [] : @filtered_flights.to_json
   end
 
   def new
@@ -32,9 +32,8 @@ class FlightsController < ApplicationController
   def show
     flight_id = params[:id]
     @flight = Flight.find_by_id(flight_id)
-    @plane = Plane.find_by_id(@flight.plane_id)
-    render @flight.to_json
-    render @plane.to_json
+    puts @flight
+    @plane = @flight.plane
   end
 
   def destroy
