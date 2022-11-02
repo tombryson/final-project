@@ -9,12 +9,7 @@ class FlightsController < ApplicationController
     origin = params[:from].upcase
     destination = params[:to].upcase
     @filtered_flights = []
-    puts @all_flights
     @all_flights.each do |flight|
-      puts origin
-      puts destination
-      puts flight.from
-      puts flight.to
       if flight.from == origin && flight.to == destination
         puts 'found a flight' + flight.id.to_s
         @filtered_flights << flight
@@ -32,8 +27,9 @@ class FlightsController < ApplicationController
   def show
     flight_id = params[:id]
     @flight = Flight.find_by_id(flight_id)
-    puts @flight
+    flight_data = []
     @plane = @flight.plane
+    render json: flight_data.push(@plane, @flight)
   end
 
   def destroy

@@ -17,6 +17,16 @@ class UsersController < ApplicationController
     render json: @users
   end
 
+  def show
+    user_id = params[:id]
+    @user = User.find_by_id(user_id)
+    puts @user
+    user_data = []
+    @bookings = @user.bookings
+    puts @bookings
+    render json: user_data.push(@user, @bookings)
+  end
+
   private 
 
   def user_params

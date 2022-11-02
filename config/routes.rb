@@ -6,6 +6,9 @@ Rails.application.routes.draw do
   get "/users" => "users#index"
   get "/search/:from/:to", to: "flights#search"
   get "/flights/:id", to: "flights#show"
+  get "/bookings/:id", to: "bookings#show"
+  post "/bookings" => "bookings#create"
+  get "/users/:id", to: "users#show"
   resource :planes
   resource :flights
   resource :bookings
