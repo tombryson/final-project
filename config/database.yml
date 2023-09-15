@@ -10,7 +10,7 @@ development:
   port: 5432
   database: burning_airlines
   username: postgres
-  password: <% ENV.POSTGRES_PASSWORD %>
+  password: <%= ENV['DATABASE_PASSWORD'] %>
 
 test:
   <<: *default
@@ -24,4 +24,4 @@ production:
   port: 5432
   database: burning_airlines
   username: postgres
-  password: <% ENV.POSTGRES_PASSWORD %>
+  password: <%= ENV['DATABASE_PASSWORD'] %>
