@@ -31,3 +31,4 @@
 # Ignore secrets
 secrets.txt
 secrets.env
+.env

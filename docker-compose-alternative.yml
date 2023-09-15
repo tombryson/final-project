@@ -1,23 +1,34 @@
-version: '3'
+version: '3.8'
 services:
   db:
     image: postgres:14
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: tomisfrofcoke1
-      POSTGRES_DB: burning-airlines
+      POSTGRES_PASSWORD: <% ENV.POSTGRES_PASSWORD %>
+      POSTGRES_DB: burning-airlinesDB_development
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
+    networks:
+      - app-network
   web:
     build: .
     command: bundle exec rails s -p 3000 -b '0.0.0.0'
     volumes:
-      - .:/app
+      - app-code-sync:/app
     ports:
       - "3000:3000"
     depends_on:
       - db
     environment:
-      POSTGRES_PASSWORD: tomisfrofcoke1
+      POSTGRES_PASSWORD: <% ENV.POSTGRES_PASSWORD %>
       RAILS_MAX_THREADS: 5
-      DATABASE_HOST: db
+    networks:
+      - app-network
+volumes:
+  app-code-sync:
+    external: true
+networks:
+  app-network:
+    driver: bridge
+    
