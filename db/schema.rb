@@ -25,7 +25,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_05_030857) do
 
   create_table "flights", force: :cascade do |t|
     t.integer "plane_id"
-    t.integer "flight_id"
     t.date "date"
     t.text "from"
     t.text "to"

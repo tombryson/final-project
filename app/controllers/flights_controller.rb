@@ -25,11 +25,15 @@ class FlightsController < ApplicationController
   end
 
   def show
-    flight_id = params[:id]
-    @flight = Flight.find_by_id(flight_id)
-    flight_data = []
-    @plane = @flight.plane
-    render json: flight_data.push(@plane, @flight)
+    if params[:id].nil?
+      return
+    else
+      flight_id = params[:id]
+      @flight = Flight.find_by_id(flight_id)
+      flight_data = []
+      @plane = @flight.plane
+      render json: flight_data.push(@plane, @flight)
+    end
   end
 
   def destroy

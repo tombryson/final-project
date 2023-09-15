@@ -11,8 +11,8 @@ p2 = Plane.create :rows => 42, :cols => 8, :model => "A330"
 Flight.destroy_all
 puts "Creating flights..."
 f1 = Flight.create :plane_id => p1.id, :date => DateTime.new(2022, 9, 22), :from => "SYD", :to => "HND"
-f2 = Flight.create :flight_id => "2", :plane_id => p1.id, :date => DateTime.new(2022, 10, 14), :from => "MEL", :to => "AKL"
-f3 = Flight.create :flight_id => "3", :plane_id => p2.id, :date => DateTime.new(2022, 11, 19), :from => "SYD", :to => "HND"
+f2 = Flight.create :plane_id => p1.id, :date => DateTime.new(2022, 10, 14), :from => "MEL", :to => "AKL"
+f3 = Flight.create :plane_id => p2.id, :date => DateTime.new(2022, 11, 19), :from => "SYD", :to => "HND"
 puts "#{Flight.count} flights created."
 
 Booking.destroy_all

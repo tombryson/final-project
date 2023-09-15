@@ -2,7 +2,6 @@ class CreateFlights < ActiveRecord::Migration[7.0]
   def change
     create_table :flights do |t|
       t.integer :plane_id
-      t.integer :flight_id
       t.date :date
       t.text :from
       t.text :to
