@@ -11,11 +11,12 @@ default: &default
   timeout: 5000
 
 development:
-  <<: *default
   adapter: postgresql
-  encoding: unicode
+  host: db
   port: 5432
-
+  database: airlines-server_development
+  username: audiomasta
+  password: <%= ENV['PROJECT_SERVER_DATABASE_PASSWORD'] %>
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
@@ -26,7 +27,9 @@ test:
   host: localhost
 
 production:
-  <<: *default
-  database: project-server_production
-  username: project-server
-  password: <%= ENV['PROJECT-SERVER_DATABASE_PASSWORD'] %>
+  adapter: postgresql
+  host: burning-airlines-postgresql.internal
+  port: 5432
+  database: airlines-server_development
+  username: audiomasta
+  password: <%= ENV['PROJECT_SERVER_DATABASE_PASSWORD'] %>
