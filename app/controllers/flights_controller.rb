@@ -1,7 +1,24 @@
 class FlightsController < ApplicationController
+  require 'uri'
+  require 'net/http'
+  require 'json'
+  
+  # def index
+  #   @flights = Flight.all
+  #   @planes = Plane.all
+  # end
+
   def index
-    @flights = Flight.all
-    @planes = Plane.all
+    url = URI.parse("https://flight-info-api.p.rapidapi.com/schedules?version=v2&DepartureDateTime=2024-06-30&ArrivalDateTime=2024-06-30&CarrierCode=QF&DepartureAirport=MEL&ArrivalAirport=SYD&FlightType=Scheduled&CodeType=IATA&ServiceType=Passenger")
+    http = Net::HTTP.new(url.host, url.port)
+    http.use_ssl = true
+    request = Net::HTTP::Get.new(url.request_uri)
+    request["x-rapidapi-key"] = '06dc58e38cmsha755babd29559cap1aeaddjsn22ad0d99b516'
+    request["x-rapidapi-host"] = 'flight-info-api.p.rapidapi.com'
+    response = http.request(request)
+    @flights = JSON.parse(response.body)
+    
+    render json: @flights
   end
   
   def search
