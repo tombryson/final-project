@@ -1,4 +1,5 @@
 class FlightsController < ApplicationController
+  protect_from_forgery with: :null_session
   require 'uri'
   require 'net/http'
   require 'json'
@@ -8,9 +9,10 @@ class FlightsController < ApplicationController
   #   @planes = Plane.all
   # end
 
-  def index
-    url = URI.parse("https://flight-info-api.p.rapidapi.com/schedules?version=v2&DepartureDateTime=2024-06-30&ArrivalDateTime=2024-06-30&CarrierCode=QF&DepartureAirport=MEL&ArrivalAirport=SYD&FlightType=Scheduled&CodeType=IATA&ServiceType=Passenger")
-    http = Net::HTTP.new(url.host, url.port)
+  def submit
+    data = JSON.parse(request.body.read)
+    render json: { message: "flight data received", data: data}
+    http = Net::HTTP.new(data.host, data.port)
     http.use_ssl = true
     request = Net::HTTP::Get.new(url.request_uri)
     request["x-rapidapi-key"] = '06dc58e38cmsha755babd29559cap1aeaddjsn22ad0d99b516'
