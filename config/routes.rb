@@ -1,7 +1,7 @@
 Rails.application.routes.draw do
   resource :users, only: [:create]
   post "/login", to: "auth#login"
-  post "submit" to: "flights#submit"
+  post "flights/submit", to: "flights#submit"
   get "/auto_login", to: "auth#auto_login"
   get "/user_is_authed", to: "auth#user_is_authed"
   get "/users" => "users#index"
