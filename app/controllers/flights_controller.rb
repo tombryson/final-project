@@ -84,7 +84,7 @@ def calculate_price(flight)
   departure_time_str = flight.dig('departure', 'time', 'utc')
   time_of_day = Time.parse(departure_time_str) rescue Time.now
   time_factor = case time_of_day.hour
-                when 6..9, 17..20 then 1.2
+                when 6..9, 17..20 then 0.8
                 else 1.0
                 end
 
@@ -95,14 +95,33 @@ def calculate_price(flight)
                  else 'standard'
                  end
   carrier_factor = case carrier_type
-                   when 'budget' then 0.8
+                   when 'budget' then 0.7
                    when 'standard' then 1.0
                    when 'premium' then 1.5
                    else 1.0
                    end
 
+  # Calculate proximity factor based on days until departure
+  departure_date_str = flight.dig('departure', 'date', 'utc')
+  departure_date = Date.parse(departure_date_str) rescue Date.today
+  days_until_departure = (departure_date - Date.today).to_i
+  proximity_factor = if days_until_departure < 1
+                       1.5
+                      elsif days_until_departure < 3
+                       1.3
+                      elsif days_until_departure < 7
+                       1.2
+                      elsif days_until_departure < 30
+                       1.1
+                      else
+                       1.0
+                     end
+
+  # Add randomness to the price
+  random_factor = 1 + rand(-0.05..0.05) # Randomly adjust price by ±5%
+
   # Calculate the price using the estimated duration and factors
-  price = base_price * (1 + estimated_duration / 100.0) * time_factor * carrier_factor
+  price = base_price * (1 + estimated_duration / 100.0) * time_factor * carrier_factor * proximity_factor * random_factor
   price.round(2)
 end
 
