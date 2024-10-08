@@ -21,6 +21,7 @@ gem "importmap-rails"
 
 gem 'dotenv-rails', groups: [:development, :test, :production]
 
+gem 'rspec-rails', groups: [:development, :test]
 
 # Hotwire's SPA-like page accelerator [https://turbo.hotwired.dev]
 gem "turbo-rails"

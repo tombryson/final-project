@@ -20,4 +20,3 @@ puts "Creating bookings..."
 a1 = Booking.create :user => u1, :flight => f1, :rows => 27, :cols => 6
 a2 = Booking.create :user => u2, :flight => f2, :rows => 42, :cols => 8
 puts "#{Booking.count} bookings created."
-

@@ -2,31 +2,38 @@ class FlightsController < ApplicationController
   require 'uri'
   require 'net/http'
   require 'json'
-  
-  # def index
-  #   @flights = Flight.all
-  #   @planes = Plane.all
-  # end
 
   def submit
-    data = JSON.parse(request.body.read)
-    api_url = URI.parse(data['apiURL'])
-
-    http = Net::HTTP.new(api_url.host, api_url.port)
-    http.use_ssl = true
-
-    request = Net::HTTP::Get.new(api_url.request_uri)
-    request["x-rapidapi-key"] = 'f5abf39ffbmsh9e4b9bfefd110e5p127ac3jsn961f33097ba4'
-    request["x-rapidapi-host"] = 'flight-info-api.p.rapidapi.com'
-
-    response = http.request(request)
-    @flights = JSON.parse(response.body)
-    
-    render json: @flights
+    if use_cached_data?
+      # Load the JSON data from the file
+      file_path = Rails.root.join('lib', 'data', 'flights_data.json')
+      flights_data = JSON.parse(File.read(file_path))['data'] # Access the 'data' key
+    else
+      # Existing API call logic
+      data = JSON.parse(request.body.read)
+      api_url = URI.parse(data['apiURL'])
+  
+      http = Net::HTTP.new(api_url.host, api_url.port)
+      http.use_ssl = true
+  
+      request = Net::HTTP::Get.new(api_url.request_uri)
+      request["x-rapidapi-key"] = 'f5abf39ffbmsh9e4b9bfefd110e5p127ac3jsn961f33097ba4'
+      request["x-rapidapi-host"] = 'flight-info-api.p.rapidapi.com'
+  
+      response = http.request(request)
+      flights_data = JSON.parse(response.body)
+    end
+  
+    flights_with_prices = flights_data.map do |flight|
+      price = calculate_price(flight)
+      flight.merge('price' => price)
+    end
+  
+    render json: flights_with_prices
   end
   
+  @all_flights = Flight.all
   def search
-    @all_flights = Flight.all
     origin = params[:from].upcase
     destination = params[:to].upcase
     @filtered_flights = []
@@ -59,4 +66,52 @@ class FlightsController < ApplicationController
 
   def destroy
   end
+end
+
+private
+
+def use_cached_data?
+  true
+end
+
+def calculate_price(flight)
+  base_price = 100
+
+  # Use elapsedTime as a proxy for distance
+  estimated_duration = flight['elapsedTime'] || 0
+
+  # Parse the departure time from the JSON structure
+  departure_time_str = flight.dig('departure', 'time', 'utc')
+  time_of_day = Time.parse(departure_time_str) rescue Time.now
+  time_factor = case time_of_day.hour
+                when 6..9, 17..20 then 1.2
+                else 1.0
+                end
+
+  # Determine carrier type based on the carrier IATA code
+  carrier_type = case flight.dig('carrier', 'iata')
+                 when 'JQ' then 'budget'
+                 when 'QF' then 'standard'
+                 else 'standard'
+                 end
+  carrier_factor = case carrier_type
+                   when 'budget' then 0.8
+                   when 'standard' then 1.0
+                   when 'premium' then 1.5
+                   else 1.0
+                   end
+
+  # Calculate the price using the estimated duration and factors
+  price = base_price * (1 + estimated_duration / 100.0) * time_factor * carrier_factor
+  price.round(2)
+end
+
+def calculate_seat_price(seat_type)
+  seat_factor = case seat_type
+                when 'economy' then 0
+                when 'business' then 150
+                when 'first_class' then 300
+                else 0
+                end
+  seat_factor
 end
