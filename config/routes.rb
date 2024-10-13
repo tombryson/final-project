@@ -12,7 +12,11 @@ Rails.application.routes.draw do
   post "/bookings" => "bookings#create"
   get "/users/:id", to: "users#show"
   resource :planes
-  resource :flights
+  resource :flights do
+    collection do
+      post 'submit'
+    end
+  end
   resource :bookings
   resource :users
 end

@@ -122,7 +122,7 @@ def calculate_price(flight)
 
   # Calculate the price using the estimated duration and factors
   price = base_price * (1 + estimated_duration / 100.0) * time_factor * carrier_factor * proximity_factor * random_factor
-  price.round(2)
+  price.round(0)
 end
 
 def calculate_seat_price(seat_type)
