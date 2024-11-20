@@ -5,20 +5,26 @@ class FlightsController < ApplicationController
 
   def submit
     if use_cached_data?
-      # Load the JSON data from the file
+      # Use cached JSON data in development or testing
       file_path = Rails.root.join('lib', 'data', 'flights_data.json')
       flights_data = JSON.parse(File.read(file_path))['data'] # Access the 'data' key
     else
-      # Existing API call logic
+      # In production, construct the API call using credentials
       data = JSON.parse(request.body.read)
-      api_url = URI.parse(data['apiURL'])
+      departure_date = data['departureDate']
+      arrival_date = data['arrivalDate']
+      carrier_code = data['carrierCode']
+      airport_departure = data['airportDeparture']
+      airport_arrival = data['airportArrival']
   
+      api_url = URI.parse("https://#{Rails.application.credentials.dig(:api, :host)}/schedules?version=v2&DepartureDateTime=#{departure_date}&ArrivalDateTime=#{arrival_date}&CarrierCode=#{carrier_code}&DepartureAirport=#{airport_departure}&ArrivalAirport=#{airport_arrival}&FlightType=Scheduled&CodeType=IATA&ServiceType=Passenger")
+      
       http = Net::HTTP.new(api_url.host, api_url.port)
       http.use_ssl = true
   
       request = Net::HTTP::Get.new(api_url.request_uri)
-      request["x-rapidapi-key"] = 'f5abf39ffbmsh9e4b9bfefd110e5p127ac3jsn961f33097ba4'
-      request["x-rapidapi-host"] = 'flight-info-api.p.rapidapi.com'
+      request["x-rapidapi-key"] = Rails.application.credentials.dig(:api, :key)
+      request["x-rapidapi-host"] = Rails.application.credentials.dig(:api, :host)
   
       response = http.request(request)
       flights_data = JSON.parse(response.body)
@@ -117,11 +123,8 @@ def calculate_price(flight)
                        1.0
                      end
 
-  # Add randomness to the price
-  random_factor = 1 + rand(-0.05..0.05) # Randomly adjust price by ±5%
-
   # Calculate the price using the estimated duration and factors
-  price = base_price * (1 + estimated_duration / 100.0) * time_factor * carrier_factor * proximity_factor * random_factor
+  price = base_price * (1 + estimated_duration / 100.0) * time_factor * carrier_factor * proximity_factor
   price.round(0)
 end
 
