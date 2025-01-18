@@ -4,40 +4,52 @@ class FlightsController < ApplicationController
   require 'json'
 
   def submit
-    if use_cached_data?
-      # Use cached JSON data in development or testing
-      file_path = Rails.root.join('lib', 'data', 'flights_data.json')
-      flights_data = JSON.parse(File.read(file_path))['data'] # Access the 'data' key
-    else
-      # In production, construct the API call using credentials
-      data = JSON.parse(request.body.read)
-      departure_date = data['departureDate']
-      arrival_date = data['arrivalDate']
-      carrier_code = data['carrierCode']
-      airport_departure = data['airportDeparture']
-      airport_arrival = data['airportArrival']
+    api_url = "https://flight-info-api.p.rapidapi.com/schedules"
+    api_params = {
+      version: "v2",
+      DepartureDateTime: params.dig(:flight, :departureDate),
+      CarrierCode: "QF,JQ,ANZ,VA",
+      DepartureAirport: params.dig(:flight, :airportDeparture),
+      ArrivalAirport: params.dig(:flight, :airportArrival),
+      FlightType: "Scheduled",
+      CodeType: "IATA",
+      ServiceType: "Passenger"
+    }
+
+    # Debugging: Print the parameters to ensure they are correct
+    puts "API Parameters: #{api_params.inspect}"
   
-      api_url = URI.parse("https://#{Rails.application.credentials.dig(:api, :host)}/schedules?version=v2&DepartureDateTime=#{departure_date}&ArrivalDateTime=#{arrival_date}&CarrierCode=#{carrier_code}&DepartureAirport=#{airport_departure}&ArrivalAirport=#{airport_arrival}&FlightType=Scheduled&CodeType=IATA&ServiceType=Passenger")
-      
-      http = Net::HTTP.new(api_url.host, api_url.port)
-      http.use_ssl = true
-  
-      request = Net::HTTP::Get.new(api_url.request_uri)
-      request["x-rapidapi-key"] = Rails.application.credentials.dig(:api, :key)
-      request["x-rapidapi-host"] = Rails.application.credentials.dig(:api, :host)
-  
-      response = http.request(request)
-      flights_data = JSON.parse(response.body)
+    # Manually construct the query string
+    query_string = "version=#{api_params[:version]}" +
+                   "&DepartureDateTime=#{api_params[:DepartureDateTime]}" +
+                   "&CarrierCode=#{api_params[:CarrierCode]}" +
+                   "&DepartureAirport=#{api_params[:DepartureAirport]}" +
+                   "&ArrivalAirport=#{api_params[:ArrivalAirport]}" +
+                   "&FlightType=#{api_params[:FlightType]}" +
+                   "&CodeType=#{api_params[:CodeType]}" +
+                   "&ServiceType=#{api_params[:ServiceType]}"
+
+    uri = URI(api_url)
+    uri.query = query_string
+
+    response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+      req = Net::HTTP::Get.new(uri)
+      req['X-RapidAPI-Key'] = ENV['RAPID_API_KEY']
+      req['X-RapidAPI-Host'] = 'flight-info-api.p.rapidapi.com'
+      http.request(req)
     end
-  
+      
+    flights_data = JSON.parse(response.body)['data'] || []
     flights_with_prices = flights_data.map do |flight|
       price = calculate_price(flight)
       flight.merge('price' => price)
     end
+    puts "flights_with_prices: #{flights_with_prices}"
   
-    render json: flights_with_prices
+    render json: flights_with_prices, status: :ok
   end
-  
+
+
   @all_flights = Flight.all
   def search
     origin = params[:from].upcase
