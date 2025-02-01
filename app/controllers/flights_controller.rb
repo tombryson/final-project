@@ -16,10 +16,6 @@ class FlightsController < ApplicationController
       ServiceType: "Passenger"
     }
 
-    # Debugging: Print the parameters to ensure they are correct
-    puts "API Parameters: #{api_params.inspect}"
-  
-    # Manually construct the query string
     query_string = "version=#{api_params[:version]}" +
                    "&DepartureDateTime=#{api_params[:DepartureDateTime]}" +
                    "&CarrierCode=#{api_params[:CarrierCode]}" +
@@ -40,6 +36,14 @@ class FlightsController < ApplicationController
     end
       
     flights_data = JSON.parse(response.body)['data'] || []
+
+    # Mock data in development environment
+    # puts "Using mock data from public/mock_return_flights.json"
+    # mock_file_path = Rails.root.join('public', 'mock_return_flights.json')
+    # file_contents = File.read(mock_file_path)
+    # flights_data = JSON.parse(file_contents) || []
+    #####MOCK##############MOCK###############MOCK##################MOCK###################MOCK############MOCK#######
+
     flights_with_prices = flights_data.map do |flight|
       price = calculate_price(flight)
       flight.merge('price' => price)
@@ -48,7 +52,6 @@ class FlightsController < ApplicationController
   
     render json: flights_with_prices, status: :ok
   end
-
 
   @all_flights = Flight.all
   def search
