@@ -4,7 +4,7 @@ class FlightsController < ApplicationController
   require 'json'
 
   def submit
-    api_url = "https://flight-info-api.p.rapidapi.com/schedules"
+    api_url = "https://api.oag.com/flight-instances/"
     api_params = {
       version: "v2",
       DepartureDateTime: params.dig(:flight, :departureDate),
@@ -30,11 +30,11 @@ class FlightsController < ApplicationController
 
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
       req = Net::HTTP::Get.new(uri)
-      req['X-RapidAPI-Key'] = ENV['RAPID_API_KEY']
-      req['X-RapidAPI-Host'] = 'flight-info-api.p.rapidapi.com'
+      req['Subscription-Key'] = ENV['OAG_API_KEY']
       http.request(req)
     end
-      
+    
+
     flights_data = JSON.parse(response.body)['data'] || []
 
     # Mock data in development environment
