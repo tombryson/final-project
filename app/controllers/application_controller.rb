@@ -1,41 +1,25 @@
 class ApplicationController < ActionController::API
-    # before_action :require_login
-
     def encode_token(payload)
-        JWT.encode(payload, 'my_secret')
-    end
-
-    def auth_header
-        request.headers['Authorization']
-    end
-
-    def decoded_token
-        if auth_header
-            token = auth_header.split(' ')[1]
-            begin
-                JWT.decode(token, 'my_secret', true, algorithm: 'HS256')
-            rescue JWT::DecodeError
-                []
-            end
-        end
+        JWT.encode(payload.merge(exp: 24.hours.from_now.to_i), Rails.application.secret_key_base, 'HS256')
     end
 
     def session_user
-        decoded_hash = decoded_token
-        if !decoded_hash.empty? 
-            puts decoded_hash.class
-            user_id = decoded_hash[0]['user_id']
-            @user = User.find_by(id: user_id)
-        else
-            nil 
-        end
-    end
+        return @current_user if defined?(@current_user)
 
-    def logged_in?
-        !!session_user
+        token = request.headers['Authorization']&.split(' ')&.last
+        return nil if token.blank?
+
+        payload = JWT.decode(token, Rails.application.secret_key_base, true, algorithm: 'HS256')[0]
+        @current_user = User.find_by(id: payload['user_id'])
+    rescue JWT::DecodeError
+        nil
     end
 
     def require_login
-     render json: {message: 'Please Login'}, status: :unauthorized unless logged_in?
+        render json: { error: 'Please sign in to continue.' }, status: :unauthorized unless session_user
+    end
+
+    def user_details(user)
+        user.as_json(only: [:id, :first_name, :last_name, :email])
     end
 end

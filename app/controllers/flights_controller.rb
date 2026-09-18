@@ -16,29 +16,32 @@ class FlightsController < ApplicationController
       ServiceType: "Passenger"
     }
 
-    query_string = "version=#{api_params[:version]}" +
-                   "&DepartureDateTime=#{api_params[:DepartureDateTime]}" +
-                   "&CarrierCode=#{api_params[:CarrierCode]}" +
-                   "&DepartureAirport=#{api_params[:DepartureAirport]}" +
-                   "&ArrivalAirport=#{api_params[:ArrivalAirport]}" +
-                   "&FlightType=#{api_params[:FlightType]}" +
-                   "&CodeType=#{api_params[:CodeType]}" +
-                   "&ServiceType=#{api_params[:ServiceType]}"
+    query_string = URI.encode_www_form(api_params)
 
     uri = URI(api_url)
     uri.query = query_string
 
-    response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+    response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 20) do |http|
       req = Net::HTTP::Get.new(uri)
       req['Subscription-Key'] = ENV['OAG_API_KEY']
       http.request(req)
     end
     
 
-    flights_data = JSON.parse(response.body)['data'] || []
+    unless response.is_a?(Net::HTTPSuccess)
+      Rails.logger.warn("OAG flight search failed with HTTP #{response.code}")
+      message = if %w[401 403].include?(response.code)
+                  'Flight search is unavailable because OAG rejected access. Check the OAG subscription and API key.'
+                else
+                  'The flight provider is unavailable. Please try again later.'
+                end
+      return render json: { error: message }, status: :bad_gateway
+    end
+
+    flights_data = JSON.parse(response.body).fetch('data')
+    raise TypeError, 'Expected a flight list' unless flights_data.is_a?(Array)
 
     # Mock data in development environment
-    # puts "Using mock data from public/mock_return_flights.json"
     # mock_file_path = Rails.root.join('public', 'mock_return_flights.json')
     # file_contents = File.read(mock_file_path)
     # flights_data = JSON.parse(file_contents) || []
@@ -46,11 +49,27 @@ class FlightsController < ApplicationController
 
     flights_with_prices = flights_data.map do |flight|
       price = calculate_price(flight)
-      flight.merge('price' => price)
+      details = {
+        'schedule_key' => flight['scheduleInstanceKey'],
+        'flight_number' => flight['flightNumber'].to_s,
+        'carrier' => flight.dig('carrier', 'iata'),
+        'date' => flight.dig('departure', 'date', 'local'),
+        'from' => flight.dig('departure', 'airport', 'iata'),
+        'to' => flight.dig('arrival', 'airport', 'iata')
+      }
+      flight_token = if details.values.all?(&:present?)
+                       Rails.application.message_verifier(:flight_booking).generate(details, expires_in: 2.hours)
+                     end
+      flight.merge('price' => price, 'bookingToken' => flight_token)
     end
-    puts "flights_with_prices: #{flights_with_prices}"
   
     render json: flights_with_prices, status: :ok
+  rescue Timeout::Error
+    render json: { error: 'The flight provider took too long to respond. Please try again.' }, status: :gateway_timeout
+  rescue SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError
+    render json: { error: 'Unable to reach the flight provider. Please try again later.' }, status: :bad_gateway
+  rescue JSON::ParserError, KeyError, TypeError
+    render json: { error: 'The flight provider returned an invalid response. Please try again later.' }, status: :bad_gateway
   end
 
   @all_flights = Flight.all
@@ -60,7 +79,6 @@ class FlightsController < ApplicationController
     @filtered_flights = []
     @all_flights.each do |flight|
       if flight.from == origin && flight.to == destination
-        puts 'found a flight' + flight.id.to_s
         @filtered_flights << flight
       end
     end

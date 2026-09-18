@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+!.env.example
+config/master.key
+config/credentials/*.key
+secrets.txt
+secrets.env
+log
+tmp
+node_modules
+coverage
+.bundle
+spec/examples.txt

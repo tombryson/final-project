@@ -1,33 +1,28 @@
 class UsersController < ApplicationController
+  before_action :require_login, except: [:create]
 
   def create
-    user = User.create(first_name: params[:first_name], last_name: params[:last_name], email: params[:email], password: params[:password]) 
-    if user.valid?
-        payload = {user_id: user.id}
-        token = encode_token(payload)
-        puts token
-        render json: {user: user, jwt: token}
+    user = User.new(user_params)
+    if user.save
+      render json: { user: user_details(user), jwt: encode_token(user_id: user.id) }, status: :created
     else
-        render json: {errors: user.errors.full_messages}, status: :not_acceptable
+      render json: { error: user.errors.full_messages.to_sentence }, status: :unprocessable_entity
     end
   end
 
   def index
-    @users = User.all
-    render json: @users
+    render json: [user_details(session_user)]
   end
 
   def show
-    user_id = params[:id]
-    @user = User.find_by_id(user_id)
-    puts @user
-    user_data = []
-    @bookings = @user.bookings
-    puts @bookings
-    render json: user_data.push(@user, @bookings)
+    if params[:id].to_s != session_user.id.to_s
+      return render json: { error: 'User not found.' }, status: :not_found
+    end
+
+    render json: [user_details(session_user), session_user.bookings]
   end
 
-  private 
+  private
 
   def user_params
     params.permit(:first_name, :last_name, :email, :password)

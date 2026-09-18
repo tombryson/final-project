@@ -1,61 +1,20 @@
 class AuthController < ApplicationController
-  # skip_before_action :require_login, only: [:login, :auto_login]
-  before_action :check_logged_in, only: [:index]
-  before_action :authorize_request, only: [:user_is_authed]
-
-  def index
-  end
+  before_action :require_login, only: [:auto_login, :user_is_authed]
 
   def login
-    user = User.find_by(email: params[:email])
-    if user && user.authenticate(params[:password])
-      payload = { user_id: user.id, exp: 24.hours.from_now.to_i }
-      token = encode_token(payload)
-      session[:user_id] = user.id
-      render json: { user: user, jwt: token, success: "Welcome back, #{user.first_name}" }
+    user = User.where('LOWER(email) = ?', params[:email].to_s.strip.downcase).order(:id).first
+    if user && user.authenticate(params[:password].to_s)
+      render json: { user: user_details(user), jwt: encode_token(user_id: user.id) }
     else
-      render json: { failure: "Log in failed! Username or password invalid!" }
+      render json: { error: 'Email or password is incorrect.' }, status: :unauthorized
     end
   end
 
   def auto_login
-    if session_user
-      render json: session_user
-    else
-      render json: { errors: "No User Logged In" }
-    end
+    render json: user_details(session_user)
   end
 
   def user_is_authed
-    render json: { message: "You are authorized" }
-  end
-
-  def check_logged_in
-    redirect_to :root if session[:user_id].present?
-  end
-
-  private
-
-  def encode_token(payload)
-    JWT.encode(payload, Rails.application.secrets.secret_key_base)
-  end
-
-  def decode_token(token)
-    begin
-      JWT.decode(token, Rails.application.secrets.secret_key_base)[0]
-    rescue JWT::DecodeError
-      nil
-    end
-  end
-
-  def authorize_request
-    token = request.headers['Authorization']&.split(' ')&.last
-    decoded_token = decode_token(token)
-
-    if decoded_token
-      @current_user = User.find(decoded_token['user_id'])
-    else
-      render json: { error: 'Unauthorized' }, status: :unauthorized
-    end
+    render json: { message: 'You are authorized' }
   end
 end

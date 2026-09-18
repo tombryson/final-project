@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get '/health', to: 'health#show'
   resource :users, only: [:create]
   post "/login", to: "auth#login"
   post "flights/submit", to: "flights#submit"
@@ -10,7 +11,9 @@ Rails.application.routes.draw do
   get "/flights", to: 'flights#index'
   post '/flights/:id/confirmation' => 'flights#confirmation'
   get "/bookings/:id", to: "bookings#show"
+  get "/bookings" => "bookings#index"
   post "/bookings" => "bookings#create"
+  delete "/bookings/:id" => "bookings#destroy"
   get "/users/:id", to: "users#show"
   resource :planes
   resource :flights do

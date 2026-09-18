@@ -6,9 +6,8 @@ su - postgres -c "createuser -s root"
 # Initialize the database
 su - postgres -c "initdb /var/lib/postgresql/data"
 
-# Update PostgreSQL configuration to accept connections from any IP address
-echo "host all all 0.0.0.0/0 trust" >> /var/lib/postgresql/data/pg_hba.conf
-echo "listen_addresses='*'" >> /var/lib/postgresql/data/postgresql.conf
+echo "host all all 127.0.0.1/32 scram-sha-256" >> /var/lib/postgresql/data/pg_hba.conf
+echo "listen_addresses='127.0.0.1'" >> /var/lib/postgresql/data/postgresql.conf
 
 # Start PostgreSQL server
 su - postgres -c "/usr/lib/postgresql/14/bin/postgres -D /var/lib/postgresql/data"

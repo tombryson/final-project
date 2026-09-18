@@ -32,3 +32,6 @@
 secrets.txt
 secrets.env
 .env
+.env.*
+!.env.example
+/config/credentials/*.key

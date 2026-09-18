@@ -15,8 +15,7 @@ development:
 test:
   <<: *default
   host: <%= ENV['DATABASE_HOST'] || 'localhost' %>
-  database: burning_airlines
-  host: localhost
+  database: burning_airlines_test
 
 production:
   <<: *default

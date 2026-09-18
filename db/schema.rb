@@ -10,17 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_09_05_030857) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_14_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
   create_table "bookings", force: :cascade do |t|
-    t.integer "rows"
-    t.integer "cols"
-    t.integer "flight_id"
-    t.integer "user_id"
+    t.integer "rows", null: false
+    t.integer "cols", null: false
+    t.integer "flight_id", null: false
+    t.integer "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["flight_id", "rows", "cols"], name: "index_bookings_on_flight_id_and_rows_and_cols", unique: true
+    t.index ["user_id"], name: "index_bookings_on_user_id"
   end
 
   create_table "flights", force: :cascade do |t|
@@ -30,6 +32,10 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_05_030857) do
     t.text "to"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "schedule_key"
+    t.string "flight_number"
+    t.string "carrier"
+    t.index ["schedule_key"], name: "index_flights_on_schedule_key", unique: true
   end
 
   create_table "planes", force: :cascade do |t|
@@ -52,4 +58,6 @@ ActiveRecord::Schema[7.0].define(version: 2022_09_05_030857) do
     t.string "username"
   end
 
+  add_foreign_key "bookings", "flights"
+  add_foreign_key "bookings", "users"
 end
