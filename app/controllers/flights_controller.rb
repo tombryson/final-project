@@ -4,48 +4,58 @@ class FlightsController < ApplicationController
   require 'json'
 
   def submit
-    api_url = "https://api.oag.com/flight-instances/"
-    api_params = {
-      version: "v2",
-      DepartureDateTime: params.dig(:flight, :departureDate),
-      CarrierCode: "QF,JQ,ANZ,VA",
-      DepartureAirport: params.dig(:flight, :airportDeparture),
-      ArrivalAirport: params.dig(:flight, :airportArrival),
-      FlightType: "Scheduled",
-      CodeType: "IATA",
-      ServiceType: "Passenger"
-    }
-
-    query_string = URI.encode_www_form(api_params)
-
-    uri = URI(api_url)
-    uri.query = query_string
-
-    response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 20) do |http|
-      req = Net::HTTP::Get.new(uri)
-      req['Subscription-Key'] = ENV['OAG_API_KEY']
-      http.request(req)
+    search = params[:flight]
+    unless search.is_a?(ActionController::Parameters) && valid_search?(search)
+      return render json: { error: 'Choose two different three-letter airport codes and a valid departure date within the next year.' }, status: :unprocessable_entity
     end
+
+    search_key = [search[:departureDate], search[:airportDeparture], search[:airportArrival]].join(':')
+    client_ip = ENV['FLY_APP_NAME'].present? ? request.headers['Fly-Client-IP'].presence || 'unknown' : request.remote_ip
+    guard = FlightSearchGuard.find_by(id: 1) || FlightSearchGuard.create_or_find_by!(id: 1)
+    flights_data = guard.reserve(client_ip, search_key)
+    unless flights_data
+      api_url = "https://api.oag.com/flight-instances/"
+      api_params = {
+        version: "v2",
+        DepartureDateTime: params.dig(:flight, :departureDate),
+        CarrierCode: "QF,JQ,ANZ,VA",
+        DepartureAirport: params.dig(:flight, :airportDeparture),
+        ArrivalAirport: params.dig(:flight, :airportArrival),
+        FlightType: "Scheduled",
+        CodeType: "IATA",
+        ServiceType: "Passenger",
+        Limit: 10
+      }
+
+      query_string = URI.encode_www_form(api_params)
+
+      uri = URI(api_url)
+      uri.query = query_string
+
+      response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 20) do |http|
+        http.max_retries = 0
+        req = Net::HTTP::Get.new(uri)
+        req['Subscription-Key'] = ENV['OAG_API_KEY']
+        http.request(req)
+      end
     
 
-    unless response.is_a?(Net::HTTPSuccess)
-      Rails.logger.warn("OAG flight search failed with HTTP #{response.code}")
-      message = if %w[401 403].include?(response.code)
-                  'Flight search is unavailable because OAG rejected access. Check the OAG subscription and API key.'
-                else
-                  'The flight provider is unavailable. Please try again later.'
-                end
-      return render json: { error: message }, status: :bad_gateway
+      unless response.is_a?(Net::HTTPSuccess)
+        Rails.logger.warn("OAG flight search failed with HTTP #{response.code}")
+        message = if %w[401 403].include?(response.code)
+                    'Flight search is unavailable because OAG rejected access. Check the OAG subscription and API key.'
+                  else
+                    'The flight provider is unavailable. Please try again later.'
+                  end
+        return render json: { error: message }, status: :bad_gateway
+      end
+
+      flights_data = JSON.parse(response.body).fetch('data')
+      raise TypeError, 'Expected a flight list' unless flights_data.is_a?(Array)
+
+      raise TypeError, 'Expected flight objects' unless flights_data.all? { |flight| flight.is_a?(Hash) }
+      guard.cache(search_key, flights_data)
     end
-
-    flights_data = JSON.parse(response.body).fetch('data')
-    raise TypeError, 'Expected a flight list' unless flights_data.is_a?(Array)
-
-    # Mock data in development environment
-    # mock_file_path = Rails.root.join('public', 'mock_return_flights.json')
-    # file_contents = File.read(mock_file_path)
-    # flights_data = JSON.parse(file_contents) || []
-    #####MOCK##############MOCK###############MOCK##################MOCK###################MOCK############MOCK#######
 
     flights_with_prices = flights_data.map do |flight|
       price = calculate_price(flight)
@@ -64,6 +74,11 @@ class FlightsController < ApplicationController
     end
   
     render json: flights_with_prices, status: :ok
+  rescue FlightSearchGuard::Limited => error
+    headers['Retry-After'] = error.retry_after.to_s
+    render json: { error: error.message }, status: :too_many_requests
+  rescue ActiveRecord::ActiveRecordError
+    render json: { error: 'Flight search is temporarily unavailable. Please try again later.' }, status: :service_unavailable
   rescue Timeout::Error
     render json: { error: 'The flight provider took too long to respond. Please try again.' }, status: :gateway_timeout
   rescue SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError
@@ -104,6 +119,21 @@ class FlightsController < ApplicationController
   end
 
   def destroy
+  end
+
+  private
+
+  def valid_search?(search)
+    departure = search[:airportDeparture]
+    arrival = search[:airportArrival]
+    date = search[:departureDate]
+    return false unless [departure, arrival].all? { |airport| airport.is_a?(String) && airport.match?(/\A[A-Z]{3}\z/) }
+    return false if departure == arrival
+    return false unless date.is_a?(String) && date.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+
+    Date.iso8601(date).between?(Date.current, Date.current + 365)
+  rescue ArgumentError
+    false
   end
 end
 

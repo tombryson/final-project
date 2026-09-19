@@ -10,6 +10,8 @@ kill_timeout = "30s"
   RAILS_ENV = "production"
   RAILS_LOG_TO_STDOUT = "true"
   DEMO_MODE = "true"
+  OAG_DAILY_LIMIT = "10"
+  OAG_30_DAY_LIMIT = "50"
 
 [http_service]
   internal_port = 3000
